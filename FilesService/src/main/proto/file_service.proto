@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option java_package = "plagiatchecker.filesservice.proto";
+option java_outer_classname = "FileServiceProto";
+
+service FileService {
+  rpc PostNewFile (stream FileChunk) returns (FileUploadResponse);
+  rpc GetFileById (GetFileRequest) returns (stream FileChunk);
+}
+
+message FileChunk {
+  string filename = 1;
+  bytes data = 2;
+}
+
+message FileUploadResponse {
+  int64 id = 1;
+}
+
+message GetFileRequest {
+  int64 id = 1;
+}

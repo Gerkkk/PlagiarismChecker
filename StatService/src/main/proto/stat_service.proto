@@ -1,0 +1,23 @@
+syntax = "proto3";
+import "file_service.proto";
+option java_package = "plagiatchecker.statsservice.proto";
+option java_outer_classname = "StatServiceProto";
+
+service StatService {
+  rpc GetFileInfoById (GetFileInfoRequest) returns (FileInfoResponse);
+  rpc GetWordCloud (GetFileInfoRequest) returns (stream FileChunk);
+}
+
+message GetFileInfoRequest {
+  int64 id = 1;
+}
+
+message FileInfoResponse {
+  int64 file_id = 1;
+  int64 num_words = 2;
+  int64 num_sentences = 3;
+  int64 num_articles = 4;
+  double max_similarity = 5;
+  int64 closest_file_id = 6;
+  double average_similarity = 7;
+}

@@ -1,0 +1,33 @@
+
+spring:
+    application:
+        name: StatsService
+    datasource:
+        url: jdbc:postgresql://stats-postgres:5432/stats_db
+        username: stats
+        password: stats
+        driver-class-name: org.postgresql.Driver
+    jpa:
+        how-sql: false
+        hibernate:
+            ddl-auto: update
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.PostgreSQLDialect
+                format_sql: true
+    liquibase:
+        enabled: false
+
+grpc:
+    server:
+        address: 0.0.0.0
+        port: 9090
+        negotiationType: PLAINTEXT
+    client:
+        file-service:
+            address: "file-service:9090"
+            negotiationType: PLAINTEXT
+
+logging:
+    level:
+        root: DEBUG
