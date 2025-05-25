@@ -39,7 +39,7 @@ import java.nio.file.Files;
 public class    FilesController {
     private final FilesServiceI filesService;
 
-    @Operation(summary = "Загрузить файл", description = "Загружает файл на сервер")
+    @Operation(summary = "Загрузить файл", description = "Загружает файл на сервер. Возвращает id созданного файла.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadFile(@Parameter(description = "Файл для загрузки") @RequestPart("file") MultipartFile file) {
         if (file.isEmpty()) {
