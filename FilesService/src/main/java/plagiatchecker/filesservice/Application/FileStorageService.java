@@ -1,6 +1,7 @@
 package plagiatchecker.filesservice.Application;
 
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class FileStorageService implements FileStorageServiceI {
     @Autowired
     private final FilesRepositoryI fileRepository;
@@ -58,22 +60,18 @@ public class FileStorageService implements FileStorageServiceI {
             }
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error(e.getMessage());
             return -1;
         }
     }
 
     @Override
     public StoredFile getFileById(int id) {
-        System.out.println("There:");
         Optional<FileInfo> info = fileRepository.findById(id);
 
         if (info.isPresent()) {
             FileInfo infoR = info.get();
-            System.out.println("Info: " + infoR.getName());
             StoredFile file = fileStorage.getFile(infoR.getPath());
-            System.out.println("File: " + file.getFileContent());
-            file.setFileName(infoR.getName());
             return file;
         } else {
             return null;

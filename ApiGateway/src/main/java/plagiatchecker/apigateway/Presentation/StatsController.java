@@ -42,16 +42,18 @@ public class StatsController {
         File file = statsService.getWordMap(id);
 
         try {
+            if (file == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
             byte[] fileContent = Files.readAllBytes(file.toPath());
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentType(MediaType.IMAGE_PNG)
                     .contentLength(fileContent.length)
                     .body(fileContent);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 }

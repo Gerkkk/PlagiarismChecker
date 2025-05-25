@@ -43,20 +43,28 @@ public class FilesGrpcService implements FilesGrpcServiceI {
         StreamObserver<FileServiceProto.FileUploadResponse> responseObserver = new StreamObserver<>() {
             @Override
             public void onNext(FileServiceProto.FileUploadResponse response) {
-                log.info("Файл загружен. ID: {}", response.getId());
                 fileIdFuture.complete(response.getId());
             }
 
             @Override
             public void onError(Throwable t) {
-                log.error("Ошибка при загрузке: {}", t.getMessage(), t);
+                if (t instanceof io.grpc.StatusRuntimeException) {
+                    io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                    io.grpc.Status.Code code = sre.getStatus().getCode();
+                    if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                        log.error("File service UNAVAILABLE: {}", t.getMessage());
+                    } else {
+                        log.error("gRPC error with code {}: {}", code, t.getMessage());
+                    }
+                } else {
+                    log.error("Error: {}", t.getMessage(), t);
+                }
+
                 fileIdFuture.completeExceptionally(t);
             }
 
             @Override
-            public void onCompleted() {
-                log.info("Загрузка завершена");
-            }
+            public void onCompleted() {}
         };
 
         StreamObserver<FileServiceProto.FileChunk> requestObserver = stub.postNewFile(responseObserver);
@@ -76,17 +84,29 @@ public class FilesGrpcService implements FilesGrpcServiceI {
                 requestObserver.onNext(fileChunk);
             }
             requestObserver.onCompleted();
-        } catch (Exception e) {
-            requestObserver.onError(e);
-            log.error("Ошибка при разбиении/отправке файла", e);
-            fileIdFuture.completeExceptionally(e);
+        } catch (Exception t) {
+            requestObserver.onError(t);
+
+            if (t instanceof io.grpc.StatusRuntimeException) {
+                io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                io.grpc.Status.Code code = sre.getStatus().getCode();
+                if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                    log.error("File service UNAVAILABLE: {}", t.getMessage());
+                } else {
+                    log.error("gRPC error with code {}: {}", code, t.getMessage());
+                }
+            } else {
+                log.error("Error: {}", t.getMessage(), t);
+            }
+
+            fileIdFuture.completeExceptionally(t);
         }
 
 
         try {
             return fileIdFuture.get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("Ошибка ожидания ответа от gRPC", e);
+            log.error("File service UNAVAILABLE: {}", e.getMessage());
             return -1;
         }
     }
@@ -104,7 +124,6 @@ public class FilesGrpcService implements FilesGrpcServiceI {
             @Override
             public void onNext(FileServiceProto.FileChunk chunk) {
                 if (fileName[0] == null) {
-                    System.out.println("Prom name: " + chunk.getFilename());
                     fileName[0] = chunk.getFilename();
                 }
                 chunks.add(chunk.getData().toByteArray());
@@ -112,24 +131,50 @@ public class FilesGrpcService implements FilesGrpcServiceI {
 
             @Override
             public void onError(Throwable t) {
-                log.error("Ошибка при получении файла: {}", t.getMessage(), t);
+                if (t instanceof io.grpc.StatusRuntimeException) {
+                    io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                    io.grpc.Status.Code code = sre.getStatus().getCode();
+                    if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                        log.error("File service UNAVAILABLE: {}", t.getMessage());
+                    } else {
+                        log.error("gRPC error with code {}: {}", code, t.getMessage());
+                    }
+                } else {
+                    log.error("Error: {}", t.getMessage(), t);
+                }
+
                 latch.countDown();
             }
 
             @Override
             public void onCompleted() {
-                log.info("Получение файла завершено");
                 latch.countDown();
             }
         });
 
         try {
             if (!latch.await(10, TimeUnit.SECONDS)) {
-                throw new RuntimeException("Timeout while receiving file");
+                log.error("File service UNAVAILABLE");
+                //throw new RuntimeException("Timeout while receiving file");
+                return null;
             }
-        } catch (InterruptedException e) {
+        } catch (Exception t) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting for file", e);
+
+            if (t instanceof io.grpc.StatusRuntimeException) {
+                io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                io.grpc.Status.Code code = sre.getStatus().getCode();
+                if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                    log.error("File service UNAVAILABLE: {}", t.getMessage());
+                } else {
+                    log.error("gRPC error with code {}: {}", code, t.getMessage());
+                }
+            } else {
+                log.error("Error: {}", t.getMessage(), t);
+            }
+
+//            throw new RuntimeException("Interrupted while waiting for file", e);
+            return null;
         }
 
         int totalSize = chunks.stream().mapToInt(arr -> arr.length).sum();
@@ -142,7 +187,6 @@ public class FilesGrpcService implements FilesGrpcServiceI {
 
         String text = new String(fileData, StandardCharsets.UTF_8);
 
-        System.out.println("File bytes: " + text + "; FileName " + fileName[0]);
         return new StoredFile(fileName[0], text);
     }
 

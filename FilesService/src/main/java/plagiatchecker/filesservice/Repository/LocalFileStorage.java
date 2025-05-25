@@ -19,11 +19,14 @@ public class LocalFileStorage implements FilesStorageI {
 
     @Override
     public boolean saveFile(String filepath, String fileContent) {
-        File file = new File(dirName + filepath);
-        try {
-            FileWriter fileWriter = new FileWriter(file);
-            fileWriter.write(new String(fileContent));
-            fileWriter.close();
+        File directory = new File(dirName);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+
+        File file = new File(dirName, filepath);
+        try (FileWriter fileWriter = new FileWriter(file)) {
+            fileWriter.write(fileContent);
         } catch (IOException e) {
             return false;
         }
@@ -33,10 +36,14 @@ public class LocalFileStorage implements FilesStorageI {
 
     @Override
     public StoredFile getFile(String filepath) {
+        File directory = new File(dirName);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+
         try {
-            String content = Files.readString(Paths.get(dirName + filepath));
-            StoredFile storedFile = new StoredFile(filepath, content);
-            return storedFile;
+            String content = Files.readString(Paths.get(dirName, filepath));
+            return new StoredFile(filepath, content);
         } catch (Exception e) {
             return null;
         }
@@ -44,9 +51,17 @@ public class LocalFileStorage implements FilesStorageI {
 
     @Override
     public List<StoredFile> fetchFiles() {
+        File directory = new File(dirName);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+
         ArrayList<StoredFile> storedFiles = new ArrayList<>();
-        for (File file : Objects.requireNonNull(new File(dirName).listFiles())) {
-            storedFiles.add(new StoredFile(file.getName(), file.toString()));
+        for (File file : Objects.requireNonNull(directory.listFiles())) {
+            try {
+                String content = Files.readString(file.toPath());
+                storedFiles.add(new StoredFile(file.getName(), content));
+            } catch (IOException e) {}
         }
 
         return storedFiles;

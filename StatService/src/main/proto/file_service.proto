@@ -5,6 +5,7 @@ option java_outer_classname = "FileServiceProto";
 
 service FileService {
   rpc GetFileById (GetFileRequest) returns (stream FileChunk);
+  rpc GetAllFiles (Empty) returns (stream FileChunkWithInfo);
 }
 
 message FileChunk {
@@ -15,3 +16,11 @@ message FileChunk {
 message GetFileRequest {
   int64 id = 1;
 }
+
+message FileChunkWithInfo {
+  string filename = 1;
+  bytes data = 2;
+  bool is_first_chunk = 3;
+}
+
+message Empty {}

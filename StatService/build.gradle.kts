@@ -19,20 +19,42 @@ repositories {
 }
 
 dependencies {
+//	implementation("org.springframework.boot:spring-boot-starter")
+//	testImplementation("org.springframework.boot:spring-boot-starter-test")
+//	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+//	implementation("org.springframework.boot:spring-boot-starter-web")
+//	implementation("net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE")
+//	implementation("com.google.protobuf:protobuf-java:3.25.2")
+//	implementation("io.grpc:grpc-protobuf:1.63.0")
+//	implementation("io.grpc:grpc-stub:1.63.0")
+//	implementation("javax.annotation:javax.annotation-api:1.3.2")
+//	implementation("org.springframework.boot:spring-boot-starter-actuator")
+//	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+//	implementation("org.postgresql:postgresql:42.7.3")
+//	compileOnly("org.projectlombok:lombok")
+//	annotationProcessor("org.projectlombok:lombok")
+//	implementation("org.springframework.boot:spring-boot-starter-webflux")
+
+	implementation(platform("io.grpc:grpc-bom:1.58.0"))
+
 	implementation("org.springframework.boot:spring-boot-starter")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE")
 	implementation("com.google.protobuf:protobuf-java:3.25.2")
-	implementation("io.grpc:grpc-protobuf:1.63.0")
-	implementation("io.grpc:grpc-stub:1.63.0")
+
+	implementation("io.grpc:grpc-protobuf")
+	implementation("io.grpc:grpc-stub")
+
 	implementation("javax.annotation:javax.annotation-api:1.3.2")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.postgresql:postgresql:42.7.3")
+	implementation("org.apache.commons:commons-math3:3.6.1")
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
+
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 
 }
@@ -54,6 +76,21 @@ protobuf {
 		}
 	}
 }
+
+sourceSets {
+	main {
+		proto {
+			srcDir("src/main/java/proto")
+		}
+		java {
+			srcDirs(
+				"build/generated/source/proto/main/java",
+				"build/generated/source/proto/main/grpc"
+			)
+		}
+	}
+}
+
 
 tasks.withType<Test> {
 	useJUnitPlatform()

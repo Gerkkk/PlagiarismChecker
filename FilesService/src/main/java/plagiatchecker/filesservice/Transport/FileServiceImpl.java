@@ -3,9 +3,12 @@ package plagiatchecker.filesservice.Transport;
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,10 +20,12 @@ import plagiatchecker.filesservice.proto.FileServiceProto;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 @GrpcService
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     @Autowired
     private final FileStorageServiceI fileStorageService;
@@ -47,7 +52,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onError(Throwable t) {
-                System.err.println("Error uploading file: " + t.getMessage());
+                log.error(t.getMessage());
             }
 
             @Override
@@ -72,21 +77,15 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     public void getFileById(FileServiceProto.GetFileRequest request,
                             StreamObserver<FileServiceProto.FileChunk> responseObserver) {
         long fileId = request.getId();
-        System.out.println("REQUEST ID: " + fileId);
         try {
-            System.out.println("Before: " );
             StoredFile storedFile = fileStorageService.getFileById((int)fileId);
-            System.out.println("After: Filename: " + storedFile.getFileName() + "; Data: " + storedFile.getFileContent());
             if (storedFile == null) {
-                System.out.println("FILE NOT FOUND");
                 responseObserver.onError(new RuntimeException("File not found with id: " + fileId));
                 return;
             }
 
             String filename = storedFile.getFileName();
             byte[] data = storedFile.getFileContent().getBytes(StandardCharsets.UTF_8);
-
-            System.out.println("FILE CONTENT: " + new String(data) + "FILE NAME: " + filename);
 
             int chunkSize = 64 * 1024;
             for (int i = 0; i < data.length; i += chunkSize) {
@@ -105,6 +104,36 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
             responseObserver.onCompleted();
 
         } catch (Exception e) {
+            responseObserver.onError(e);
+        }
+    }
+
+    @Override
+    public void getAllFiles(FileServiceProto.Empty request,
+                            StreamObserver<FileServiceProto.FileChunkWithInfo> responseObserver) {
+        try {
+            List<StoredFile> storedFiles = fileStorageService.fetchFiles();
+
+            for (StoredFile file : storedFiles) {
+                byte[] fileBytes = file.getFileContent().getBytes();
+                ByteArrayInputStream inputStream = new ByteArrayInputStream(fileBytes);
+                byte[] buffer = new byte[1024 * 64];
+                int bytesRead;
+                boolean isFirstChunk = true;
+
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    FileServiceProto.FileChunkWithInfo.Builder chunkBuilder = FileServiceProto.FileChunkWithInfo.newBuilder()
+                            .setFilename(file.getFileName())
+                            .setIsFirstChunk(isFirstChunk)
+                            .setData(com.google.protobuf.ByteString.copyFrom(buffer, 0, bytesRead));
+
+                    responseObserver.onNext(chunkBuilder.build());
+                    isFirstChunk = false;
+                }
+            }
+
+            responseObserver.onCompleted();
+        } catch (IOException e) {
             responseObserver.onError(e);
         }
     }

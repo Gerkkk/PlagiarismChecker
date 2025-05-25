@@ -43,6 +43,9 @@ public class    FilesController {
         long t;
         try {
             t = filesService.uploadFile(file);
+            if (t == -1) {
+                return ResponseEntity.badRequest().body("File with the same body already exists");
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -56,16 +59,19 @@ public class    FilesController {
         File file = filesService.getFile(id);
 
         try {
-            byte[] fileContent = Files.readAllBytes(file.toPath());
+            if (file != null) {
+                byte[] fileContent = Files.readAllBytes(file.toPath());
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(fileContent.length)
-                    .body(fileContent);
-
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .contentLength(fileContent.length)
+                        .body(fileContent);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 }

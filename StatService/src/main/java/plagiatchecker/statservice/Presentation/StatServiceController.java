@@ -21,9 +21,7 @@ public class  StatServiceController extends StatServiceGrpc.StatServiceImplBase 
     @Override
     public void getFileInfoById(StatServiceProto.GetFileInfoRequest request, StreamObserver<StatServiceProto.FileInfoResponse> responseObserver) {
         long fileId = request.getId();
-        System.out.println("ID: " + fileId);
         var stats = wordStatsService.getFileStats((int)fileId);
-        System.out.println("Stats for " + fileId + " : " + stats);
         StatServiceProto.FileInfoResponse response = StatServiceProto.FileInfoResponse.newBuilder()
                 .setFileId(stats.getId())
                 .setNumWords(stats.getNumWords())

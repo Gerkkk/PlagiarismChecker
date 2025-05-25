@@ -1,5 +1,6 @@
 package plagiatchecker.statservice.Transport;
 
+import com.google.protobuf.Empty;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -13,9 +14,10 @@ import plagiatchecker.filesservice.proto.FileServiceProto;
 import plagiatchecker.statservice.Domain.Entities.StoredFile;
 import plagiatchecker.statservice.Domain.Interfaces.Transport.FileProviderI;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +52,6 @@ public class FileProvider implements FileProviderI {
             @Override
             public void onNext(FileServiceProto.FileChunk chunk) {
                 if (fileName[0] == null) {
-                    System.out.println("Prom name: " + chunk.getFilename());
                     fileName[0] = chunk.getFilename();
                 }
                 chunks.add(chunk.getData().toByteArray());
@@ -58,24 +59,36 @@ public class FileProvider implements FileProviderI {
 
             @Override
             public void onError(Throwable t) {
-                log.error("Ошибка при получении файла: {}", t.getMessage(), t);
+                if (t instanceof io.grpc.StatusRuntimeException) {
+                    io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                    io.grpc.Status.Code code = sre.getStatus().getCode();
+                    if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                        log.error("File service UNAVAILABLE: {}", t.getMessage());
+                    } else {
+                        log.error("gRPC error with code {}: {}", code, t.getMessage());
+                    }
+                } else {
+                    log.error("Error: {}", t.getMessage(), t);
+                }
+
                 latch.countDown();
             }
 
             @Override
             public void onCompleted() {
-                log.info("Получение файла завершено");
                 latch.countDown();
             }
         });
 
         try {
             if (!latch.await(10, TimeUnit.SECONDS)) {
-                throw new RuntimeException("Timeout while receiving file");
+                log.error("File service did not complete within 10 seconds");
+                //throw new RuntimeException("Timeout while receiving file");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting for file", e);
+            log.error("Error: {}", e.getMessage(), e);
+            //throw new RuntimeException("Interrupted while waiting for file", e);
         }
 
         int totalSize = chunks.stream().mapToInt(arr -> arr.length).sum();
@@ -88,7 +101,85 @@ public class FileProvider implements FileProviderI {
 
         String text = new String(fileData, StandardCharsets.UTF_8);
 
-        System.out.println("File bytes: " + text + "; FileName " + fileName[0]);
         return new StoredFile(fileName[0], text);
     }
+
+    @Override
+    public List<StoredFile> getAllFiles() {
+        List<StoredFile> files = new ArrayList<>();
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        final StringBuilder currentFileName = new StringBuilder();
+        final ByteArrayOutputStream currentFileContent = new ByteArrayOutputStream();
+
+        stub.getAllFiles(FileServiceProto.Empty.newBuilder().build(), new StreamObserver<FileServiceProto.FileChunkWithInfo>() {
+            @Override
+            public void onNext(FileServiceProto.FileChunkWithInfo chunk) {
+                try {
+                    if (chunk.getIsFirstChunk()) {
+                        if (currentFileName.length() > 0) {
+                            files.add(new StoredFile(currentFileName.toString(), currentFileContent.toString()));
+                            currentFileContent.reset();
+                        }
+                        currentFileName.setLength(0);
+                        currentFileName.append(chunk.getFilename());
+                    }
+
+                    currentFileContent.write(chunk.getData().toByteArray());
+                } catch (Exception t) {
+                    if (t instanceof io.grpc.StatusRuntimeException) {
+                        io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                        io.grpc.Status.Code code = sre.getStatus().getCode();
+                        if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                            log.error("File service UNAVAILABLE: {}", t.getMessage());
+                        } else {
+                            log.error("gRPC error with code {}: {}", code, t.getMessage());
+                        }
+                    } else {
+                        log.error("Error: {}", t.getMessage(), t);
+                    }
+
+                    //throw new RuntimeException("Ошибка при сборке файла из чанков", e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                finishLatch.countDown();
+
+                if (t instanceof io.grpc.StatusRuntimeException) {
+                    io.grpc.StatusRuntimeException sre = (io.grpc.StatusRuntimeException) t;
+                    io.grpc.Status.Code code = sre.getStatus().getCode();
+                    if (code == io.grpc.Status.Code.UNAVAILABLE) {
+                        log.error("File service UNAVAILABLE: {}", t.getMessage());
+                    } else {
+                        log.error("gRPC error with code {}: {}", code, t.getMessage());
+                    }
+                } else {
+                    log.error("Error: {}", t.getMessage(), t);
+                }
+
+                //throw new RuntimeException("Ошибка при получении файлов", t);
+            }
+
+            @Override
+            public void onCompleted() {
+                if (currentFileName.length() > 0) {
+                    files.add(new StoredFile(currentFileName.toString(), currentFileContent.toString()));
+                }
+                finishLatch.countDown();
+            }
+        });
+
+        try {
+            finishLatch.await();
+        } catch (InterruptedException t) {
+            Thread.currentThread().interrupt();
+            log.error("Error: {}", t.getMessage(), t);
+            //throw new RuntimeException("Ожидание потока было прервано", e);
+        }
+
+        return files;
+    }
+
 }

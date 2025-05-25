@@ -41,17 +41,17 @@ public class StatsGrpcService implements StatsGrpcServiceI {
                 .build();
 
         var resp = statServiceStub.getFileInfoById(request);
-        System.out.println("resp: " + resp);
-        return FileStats
-                              .builder()
-                              .id(resp.getFileId())
-                              .maxSimilarity(resp.getMaxSimilarity())
-                              .averageSimilarity(resp.getAverageSimilarity())
-                              .numWords(resp.getNumWords())
-                              .numSentences(resp.getNumSentences())
-                              .numArticles(resp.getNumArticles())
-                              .closestFileId(resp.getClosestFileId())
-                              .build();
+
+        if (resp == null) return null;
+        return FileStats.builder()
+                      .id(resp.getFileId())
+                      .maxSimilarity(resp.getMaxSimilarity())
+                      .averageSimilarity(resp.getAverageSimilarity())
+                      .numWords(resp.getNumWords())
+                      .numSentences(resp.getNumSentences())
+                      .numArticles(resp.getNumArticles())
+                      .closestFileId(resp.getClosestFileId())
+                      .build();
     }
 
     public byte[] getWordMap(int fileId) {

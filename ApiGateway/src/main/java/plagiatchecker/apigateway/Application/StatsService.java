@@ -1,6 +1,7 @@
 package plagiatchecker.apigateway.Application;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import plagiatchecker.apigateway.Domain.Entities.FileStats;
 import plagiatchecker.apigateway.Domain.Entities.StoredFile;
@@ -12,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class StatsService implements StatsServiceI {
     private final StatsGrpcServiceI statsGrpcService;
@@ -30,14 +32,15 @@ public class StatsService implements StatsServiceI {
         byte[] wordMap = statsGrpcService.getWordMap(id);
 
         try {
-            File tempFile = File.createTempFile("", "_" + String.valueOf(id));
+            File tempFile = File.createTempFile("file_", "_" + String.valueOf(id) + ".png");
             try (FileOutputStream fos = new FileOutputStream(tempFile)) {
                 fos.write(wordMap);
             }
 
             return tempFile;
         } catch (IOException e) {
-            throw new RuntimeException("Ошибка при создании файла", e);
+            log.error(e.getMessage());
+            throw new RuntimeException("Error getting word map", e);
         }
     }
 }
