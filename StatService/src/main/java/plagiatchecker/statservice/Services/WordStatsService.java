@@ -48,7 +48,7 @@ public class WordStatsService implements WordStatsServiceI {
         if (file == null) return null;
 
         FileStats fileStats = new FileStats(file.getFileContent());
-
+        fileStats.setId(id);
         AnalysisResult res = plagiarismChecker.analyzeFile(file, 1);
         fileStats.setClosestFileId(Integer.parseInt(res.closestFileName));
         fileStats.setAverageSimilarity(res.averageDistanceBelowThreshold);

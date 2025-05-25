@@ -29,7 +29,7 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java:3.25.2")
     implementation("javax.annotation:javax.annotation-api:1.3.2")
     implementation("net.devh:grpc-client-spring-boot-starter:2.15.0.RELEASE")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
+//    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 
     implementation("org.hibernate.validator:hibernate-validator:6.2.0.Final")
     //implementation("jakarta.validation:jakarta.validation-api:2.0.2")
@@ -46,6 +46,12 @@ dependencies {
 
     compileOnly("org.apache.tomcat:annotations-api:6.0.53")
     implementation("jakarta.validation:jakarta.validation-api:3.0.2")
+
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.3")
+    implementation("io.swagger.core.v3:swagger-annotations:2.2.8")
+
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.3")
+    implementation("io.swagger.core.v3:swagger-annotations-jakarta:2.2.8")
 
     //implementation("org.springframework.boot:spring-boot-starter-multipart")
 }
@@ -67,6 +73,18 @@ protobuf {
         }
     }
 }
+
+configurations.all {
+    resolutionStrategy {
+        eachDependency {
+            if (requested.group == "io.swagger.core.v3" && requested.name == "swagger-annotations") {
+                useVersion("2.2.8")
+                because("Avoid conflicts with older versions of swagger-annotations")
+            }
+        }
+    }
+}
+
 
 tasks.processResources {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

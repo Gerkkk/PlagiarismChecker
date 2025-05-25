@@ -14,7 +14,7 @@ import lombok.ToString;
 @NoArgsConstructor
 public class FileStats {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    //@GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
     int numWords;
     int numSentences;

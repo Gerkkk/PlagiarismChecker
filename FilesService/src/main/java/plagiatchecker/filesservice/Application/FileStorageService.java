@@ -50,6 +50,7 @@ public class FileStorageService implements FileStorageServiceI {
 
                 if (r) {
                     fileRepository.updateFilepath(savedInfo.getId(), String.format("%d", savedInfo.getId()));
+                    System.out.println("File uploaded. New id: " + savedInfo.getId());
                     return savedInfo.getId();
                 } else {
                     return -1;

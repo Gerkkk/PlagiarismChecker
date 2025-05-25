@@ -3,6 +3,8 @@ package plagiatchecker.apigateway.Presentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.SchemaProperty;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -14,7 +16,18 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import plagiatchecker.apigateway.Application.FilesService;
+import plagiatchecker.apigateway.Domain.Dto.UploadFileRequest;
 import plagiatchecker.apigateway.Domain.Interfaces.Services.FilesServiceI;
+
+//import io.swagger.v3.oas.annotations.Operation;
+//import io.swagger.v3.oas.annotations.parameters.RequestBody;
+//import io.swagger.v3.oas.annotations.media.Content;
+//import io.swagger.v3.oas.annotations.media.Schema;
+//import org.springframework.web.bind.annotation.*;
+//import org.springframework.http.MediaType;
+//import org.springframework.http.ResponseEntity;
+//import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.media.SchemaProperty;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -26,12 +39,9 @@ import java.nio.file.Files;
 public class    FilesController {
     private final FilesServiceI filesService;
 
-    @PostMapping
-    @Operation(
-            summary = "Загрузить новый файл в систему",
-            description = "Загружает файл на сервер"
-    )
-    public ResponseEntity<String> uploadFile(@Parameter(description = "Файл для загрузки") @RequestParam("file") MultipartFile file) {
+    @Operation(summary = "Загрузить файл", description = "Загружает файл на сервер")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> uploadFile(@Parameter(description = "Файл для загрузки") @RequestPart("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("Please upload a non-empty file");
         }

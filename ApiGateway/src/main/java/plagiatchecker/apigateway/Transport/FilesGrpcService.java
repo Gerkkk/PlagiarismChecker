@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 @Component
 @RequiredArgsConstructor
 public class FilesGrpcService implements FilesGrpcServiceI {
-    CompletableFuture<Long> fileIdFuture = new CompletableFuture<>();
     private FileServiceGrpc.FileServiceStub stub;
 
     @PostConstruct
@@ -40,6 +39,7 @@ public class FilesGrpcService implements FilesGrpcServiceI {
     }
 
     public long uploadFile(String fileName, byte[] fileData) {
+        CompletableFuture<Long> fileIdFuture = new CompletableFuture<>();
         StreamObserver<FileServiceProto.FileUploadResponse> responseObserver = new StreamObserver<>() {
             @Override
             public void onNext(FileServiceProto.FileUploadResponse response) {
